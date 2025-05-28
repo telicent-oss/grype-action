@@ -184,10 +184,8 @@ runs:
       if: ${{ always() }}
       shell: bash
       run: |
-        ls -l ${RUNNER_TEMP}
-
-        if [ -f "${RUNNER_TEMP}/${{ steps.sanitised.outputs.name }}-grype-gating-report.txt" ]; then
-          echo "# Grype \`${{ inputs.scan-type }}\` scan on \` ${{inputs.scan-ref }}\`" >> "$GITHUB_STEP_SUMMARY"
+        if [ -f "${RUNNER_TEMP}/${{ steps.sanitised.outputs.name }}-grype-gating-report.json" ]; then
+          echo "# Grype \`${{ inputs.scan-type }}\` scan on \`${{inputs.scan-ref }}\`" >> "$GITHUB_STEP_SUMMARY"
           SCAN_ARG=""
           case "${{ inputs.scan-type }}" in
             image)
@@ -211,8 +209,6 @@ runs:
           echo "Running grype again to generate job summary"
           ${{ steps.setup-grype.outputs.cmd }} $SCAN_ARG --output template \
             --template .grype-templates/report-template.tpl >> "$GITHUB_STEP_SUMMARY"
-        else
-          echo "No report file found to generate job summary from"
         fi
 
     - name: Add Error to Build if Scan Failed
