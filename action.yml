@@ -107,7 +107,11 @@ runs:
         name: ${{ inputs.scan-name }}
         remote-vex: ${{ inputs.remote-vex }}
 
-    # TODO Generate a Grype Ignore file from the Merged VEX statements
+    - name: Generate Grype Ignore file
+      if: ${{ steps.merge-vex.outputs.prepared == 'true' }}
+      shell: bash
+      run: |
+        cat ${{ steps.merge-vex.outputs.vex-file }} | yq '.statements[] | select(.status == "not_affected") | { "ignore": [ { "vulnerability": .vulnerability.name, "namespace": "${{ steps.merge-vex.outputs.vex-filename }}", "reason": .justification } ] } | . as $item ireduce({}; . *+ $item)' > .grype.yaml
 
     - name: Setup Grype
       id: setup-grype
@@ -222,3 +226,4 @@ runs:
       shell: sh
       run: |
         rm -Rf .grype-templates/
+        rm -f .grype.yaml
