@@ -1,5 +1,3 @@
-<h3>Target <code>{{ .Source.Target.UserInput }}</code></h3>
-
 {{- if (eq (len .Matches) 0) }}
 <h4>No Vulnerabilities found</h4>
 {{- else }}
@@ -19,8 +17,11 @@
         <td>{{ .Vulnerability.Severity }}</td>
         <td>{{ .Artifact.Version }}</td>
         <td>
+        {{- if .Vulnerability.Fix.State }}
         <code>{{ .Vulnerability.Fix.State }}</code>
+        {{- end }}
         {{- if (gt (len .Vulnerability.Fix.Versions) 0) }}
+        in versions:
         <ul>
         {{- range .Vulnerability.Fix.Versions }}
           <li>{{ . }}</li>
