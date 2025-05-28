@@ -208,8 +208,11 @@ runs:
               exit 1
               ;;
           esac
+          echo "Running grype again to generate job summary"
           ${{ steps.setup-grype.outputs.cmd }} $SCAN_ARG --output template \
             --template .grype-templates/report-template.tpl >> "$GITHUB_STEP_SUMMARY"
+        else
+          echo "No report file found to generate job summary from"
         fi
 
     - name: Add Error to Build if Scan Failed
