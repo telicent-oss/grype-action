@@ -111,7 +111,8 @@ runs:
       if: ${{ steps.merge-vex.outputs.prepared == 'true' }}
       shell: bash
       run: |
-        cat ${{ steps.merge-vex.outputs.vex-file }} | yq '.statements[] | select(.status == "not_affected") | { "ignore": [ { "vulnerability": .vulnerability.name, "namespace": "${{ steps.merge-vex.outputs.vex-filename }}", "reason": .justification } ] } | . as $item ireduce({}; . *+ $item)' > .grype.yaml
+        cat ${{ steps.merge-vex.outputs.vex-file }} | yq '.statements[] | select(.status == "not_affected") | { "ignore": [ { "vulnerability": .vulnerability.name, "namespace": "${{ steps.merge-vex.outputs.vex-file-name }}", "reason": .justification } ] } | . as $item ireduce({}; . *+ $item)' > .grype.yaml
+        cat .grype.yaml
 
     - name: Setup Grype
       id: setup-grype
