@@ -82,7 +82,7 @@ jobs:
         with:
           scan-type: image
           scan-ref: telicent/telicent-java21:1.2.12
-          scan-name: telicent-java21
+          scan-name: good-scan
 
   remote-vex-scan:
     needs: cache-images
@@ -140,7 +140,7 @@ jobs:
         with:
           scan-type: image
           scan-ref: telicent/telicent-access-api:1.4.2
-          scan-name: telicent-access-api
+          scan-name: failing-scan
 
       - name: Fail if Grype didn't fail
         if: ${{ failure() && steps.grype-scan.outcome != 'failed' }}

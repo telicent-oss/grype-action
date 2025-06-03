@@ -108,11 +108,28 @@ runs:
         remote-vex: ${{ inputs.remote-vex }}
 
     - name: Generate Grype Ignore file
+      id: generate-grype-config
       if: ${{ steps.merge-vex.outputs.prepared == 'true' }}
       shell: bash
       run: |
-        cat ${{ steps.merge-vex.outputs.vex-file }} | yq '.statements[] | select(.status == "not_affected") | { "ignore": [ { "vulnerability": .vulnerability.name, "namespace": "${{ steps.merge-vex.outputs.vex-file-name }}", "reason": .justification } ] } | . as $item ireduce({}; . *+ $item)' > .grype.yaml
-        cat .grype.yaml
+        cat ${{ steps.merge-vex.outputs.vex-file }} | yq '.statements[] | select(.status == "not_affected") | { "ignore": [ { "vulnerability": .vulnerability.name, "reason": "${{ steps.merge-vex.outputs.vex-file-name }}: \(.justification)" } ] } | . as $item ireduce({}; . *+ $item)' > .grype.yaml.generated
+
+        echo ""
+        echo "Generated Grype Configuration is as follows:"
+        cat .grype.yaml.generated
+        echo ""
+
+        if [ -f ".grype.yaml" ]; then
+          echo "Merging Grype Configuration files..."
+          cp -v .grype.yaml .grype.yaml.original
+          yq eval-all '. as $item ireduce ({}; . *+ $item )' .grype.yaml.original .grype.yaml.generated > .grype.yaml.merged
+          cp -fv .grype.yaml.merged .grype.yaml
+          echo "Merged Grype configuration file is as follows:"
+          cat .grype.yaml
+        else
+          cp -v .grype.yaml.generated .grype.yaml
+        fi
+        echo ""
 
     - name: Setup Grype
       id: setup-grype
@@ -224,7 +241,16 @@ runs:
 
     - name: Cleanup .grype-templates/
       if: ${{ always() }}
-      shell: sh
+      shell: bash
       run: |
+        # Remove Grype report templates
         rm -Rf .grype-templates/
-        rm -f .grype.yaml
+
+        # Removed generated and merged Grype files if present
+        rm -f .grype.yaml.generated .grype.yaml.merged
+
+        # Restore original Grype configuration file if exists
+        if [ -f .grype.yaml.original ]; then
+          mv -fv .grype.yaml.original .grype.yaml
+        fi
+        

@@ -1,0 +1,4 @@
+# Test config file to ensure Action honours it as well as any generated config file
+ignore:
+  - vulnerability: "CVE-2021-31879"
+    reason: "vulnerable_code_not_present"

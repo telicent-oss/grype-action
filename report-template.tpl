@@ -53,9 +53,11 @@
         <td>{{ .Vulnerability.Severity }}</td>
         <td>{{ .Artifact.Version }}</td>
         <td>
-        {{- range .AppliedIgnoreRules }}
-          <code>${{ .Namespace }}</code>: {{ .Reason }}
-        {{- end}}
+          <ul>
+          {{- range .AppliedIgnoreRules }}
+            <li>{{ .Reason }}</li>
+          {{- end}}
+          </ul>
         </td>
     </tr>
     {{- end }}
