@@ -2,7 +2,7 @@
 
 This repository provides a GitHub Action that wraps our standard patterns of usage of the [Anchore Grype][1] and the
 [Anchore Scan Action][2] into a composite action so we can simplify our workflows and standardise improvements to how
-we surface Trivy scan information in our builds.
+we surface Grype scan information in our builds.
 
 # Usage
 
@@ -66,7 +66,8 @@ permissions to read all the repositories you want to retrieve Remote VEX stateme
 
 In this scenario the minimum permissions required for this feature to work correctly are `read:packages` and `repo`, and
 for the `repo` permission it **MUST** pertain to all repositories you wish to access.  This means that the default
-GitHub token permissions are generally **NOT** sufficient to use this feature.
+GitHub token permissions are generally **NOT** sufficient to use this feature, **UNLESS** all the referenced
+repositories are public repositories.
 
 If you provide a custom GitHub token then you **MUST** also customise the `gh-user` input to match the username of the
 user who generated the GitHub token.
@@ -84,8 +85,13 @@ All discovered OpenVEX statements are merged together using the [`vexctl`][4] to
 file for the scan, this will be attached to the build as an artifact named `<scan-name>-merged-vex-statements` so it can
 be reviewed if needed.
 
-Any vulnerabilities that are suppressed as a result will be displayed in the GitHub Build Summary and listed in the full
-Trivy JSON Report:
+Note that the way Grype implements VEX support differs from Trivy so we don't pass the merged OpenVEX statements to
+Grype directly, rather we use them to generate a `.grype.yaml` file with ignore rules for each VEX statement that
+indicates a vulnerability is not applicable.  If your repository also has a `.grype.yaml` file then the generated file
+will be merged with your existing file for the scan, and then your original file restored afterwards.
+
+Any HIGH/CRITICAL severity vulnerabilities that are suppressed as a result will be displayed in the GitHub Build Summary
+and listed in the full Grype JSON Report:
 
 ![Example Suppressed Vulnerabilities Report](vex-suppression-example.png)
 
@@ -131,11 +137,11 @@ jobs:
 Here we are configuring the action to retrieve remote VEX statements from the `telicent-oss/telicent-base-images` and
 `telicent-oss/smart-caches-core` repositories `main` branches.
 
-Notice that for this to work we need to set the `gh-user` and `gh-token` inputs to custom values, in this example these
-reference some Action secrets that have been created.  The token passed in as the `gh-token` input **MUST** have the
-ability to read the contents of this repository, it **MUST** also have the ability to read packages from repositories as
-the `trivy` and `vexctl` command line tools needed are installed via querying the GitHub Releases API, see [Token
-Permissions](#github-token-permissions) for more information on this.
+Notice that for this to work you **MAY** need to set the `gh-user` and `gh-token` inputs to custom values, in this
+example these reference some Action secrets that have been created.  The token passed in as the `gh-token` input
+**MUST** have the ability to read the contents of this repository, it **MUST** also have the ability to read packages
+from repositories as the `trivy` and `vexctl` command line tools needed are installed via querying the GitHub Releases
+API, see [Token Permissions](#github-token-permissions) for more information on this.
 
 Note that if any of the specified repositories does not exist, does not have the referenced branch, or no `.vex/`
 directory exists on that branch then a build warning is issued e.g.
@@ -149,12 +155,12 @@ This warning is issued regardless of the reason for failure e.g. bad [Token Perm
 
 | Input | Required? | Default | Purpose |
 |-------|-----------|---------|---------|
-| `scan-type` | Yes | N/A | Specifies the kind of Trivy scan to run, one of `fs`, `image`, `config` or `sbom` |
+| `scan-type` | Yes | N/A | Specifies the kind of Grype scan to run, one of `fs`, `image`, `config` or `sbom` |
 | `scan-ref` | Yes | N/A | Specifies what to scan, for `scan-type` of `fs`/`sbom` this is a file system path, for `image` this is a reference to a container image, for `config` this is a reference to a Dockerfile |
 | `scan-name` | Yes | N/A | A unique name (within the calling workflow) for this scan used to disambiguate the scan artifacts when they are attached as artifacts to the build. |
 | `remote-vex` | No | `null` | If your scans involved building atop of libraries/base images provided in other repositories you can supply one/more references to repositories here from which VEX statements will be retrieved, see [VEX Support](#vex-support). |
 | `allow-unfixed` | No | `false` | Sets the `only-fixed` input passed on to the [`anchore/scan-action`][1] that controls whether unfixed HIGH/CRITICAL severity vulnerabilities fail the build. |
-| `gh-token` | No | `github.token` | Sets the GitHub token used to authenticate to GitHub to fetch Trivy release metadata to determine whether the cache needs updating. |
+| `gh-token` | No | `github.token` | Sets the GitHub token used to authenticate to GitHub to fetch Grype release metadata. |
 
 # Outputs
 
@@ -171,3 +177,8 @@ This Action is licensed under the Apache License 2.0, see [LICENSE](LICENSE) and
 [1]: https://github.com/anchore/grype
 [2]: https://github.com/anchore/scan-action
 [4]: https://github.com/openvex/vexctl
+
+# Related Work
+
+See also our equivalent [`telicent-oss/trivy-action`](https://github.com/telicent-oss/trivy-action) which was developed
+first, this action represents a subset of that actions functionality since `trivy` has a few more features vs `grype`.
