@@ -1,0 +1,247 @@
+name: Action Self-Tests
+on:
+  push:
+    branches:
+      - "**"
+    tags:
+      - "**"
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  cache-images:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        image: [ "telicent/telicent-java21:1.2.12", "telicent/telicent-access-api:1.4.2", "alpine:3.21.3" ]
+      fail-fast: true
+    steps:
+      - name: Cache Images
+        uses: telicent-oss/docker-image-cache-action@v1
+        with:
+          images: ${{ matrix.image }}
+          restore-only: false
+
+  matrix-scan:
+    runs-on: ubuntu-latest
+    needs: cache-images
+    strategy:
+      matrix:
+        image: [ "telicent/telicent-java21:1.2.12", "alpine:3.21.3" ]
+      fail-fast: false
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.3.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Restore Cached Image
+        uses: telicent-oss/docker-image-cache-action@v1
+        with:
+          images: ${{ matrix.image }}
+          restore-only: true
+
+      - name: Grype Image Scan that Passes
+        id: grype-scan
+        uses: telicent-oss/grype-action@v1
+        with:
+          scan-type: image
+          scan-ref: ${{ matrix.image }}
+          scan-name: matrix-${{ matrix.image }}
+
+  good-image-scan:
+    runs-on: ubuntu-latest
+    needs: cache-images
+    steps:
+      # Need to checkout as we need the VEX statements for the scan to pass!
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.3.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Restore Cached Image
+        uses: telicent-oss/docker-image-cache-action@v1
+        with:
+          images: telicent/telicent-java21:1.2.12
+          restore-only: true
+        
+      - name: Grype Image Scan that Passes
+        id: grype-scan
+        uses: telicent-oss/grype-action@v1
+        with:
+          scan-type: image
+          scan-ref: telicent/telicent-java21:1.2.12
+          scan-name: good-scan
+
+  remote-vex-scan:
+    needs: cache-images
+    runs-on: ubuntu-latest
+    steps:
+      # Intentionally not checking out, relying on remote-vex support
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.3.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Restore Cached Image
+        uses: telicent-oss/docker-image-cache-action@v1
+        with:
+          images: telicent/telicent-java21:1.2.12
+          restore-only: true
+
+      - name: Grype Image Scan that Passes
+        id: grype-scan
+        uses: telicent-oss/grype-action@v1
+        with:
+          scan-type: image
+          scan-ref: telicent/telicent-java21:1.2.12
+          scan-name: remote-vex-telicent-java21
+          remote-vex: |
+            telicent-oss/grype-action
+              telicent-oss/no-such-repo    
+            telicent-oss/telicent-base-images
+
+  failing-image-scan:
+    runs-on: ubuntu-latest
+    needs: cache-images
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.3.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Restore Cached Image
+        uses: telicent-oss/docker-image-cache-action@v1
+        with:
+          images: telicent/telicent-access-api:1.4.2
+          restore-only: true
+        
+      - name: Grype Image Scan that Fails
+        id: grype-scan
+        continue-on-error: true
+        uses: telicent-oss/grype-action@v1
+        with:
+          scan-type: image
+          scan-ref: telicent/telicent-access-api:1.4.2
+          scan-name: failing-scan
+
+      - name: Fail if Grype didn't fail
+        if: ${{ failure() && steps.grype-scan.outcome != 'failed' }}
+        run: |
+          exit 1
+
+  empty-remote-vex:
+    runs-on: ubuntu-latest
+    needs: cache-images
+    steps:
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.3.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Restore Cached Image
+        uses: telicent-oss/docker-image-cache-action@v1
+        with:
+          images: telicent/telicent-access-api:1.4.2
+          restore-only: true
+        
+      - name: Grype Image Scan that Fails
+        id: grype-scan
+        continue-on-error: true
+        uses: telicent-oss/grype-action@v1
+        with:
+          scan-type: image
+          scan-ref: telicent/telicent-access-api:1.4.2
+          scan-name: empty-remote-vex
+          # Intentionally empty whitespace input for remote-vex
+          remote-vex: |
+               
+      - name: Fail if Grype didn't fail
+        if: ${{ failure() && steps.grype-scan.outcome != 'failed' }}
+        run: |
+          exit 1
+
+      - name: Download Scan Artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: ${{ steps.grype-scan.outputs.scan-results }}
+
+  filesystem-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: telicent-oss/smart-caches-core
+
+      - name: Grype Filesystem Scan
+        id: grype-scan
+        uses: telicent-oss/grype-action@v1
+        with:
+          scan-type: fs
+          scan-ref: .
+          scan-name: telicent-smart-caches-core
+
+  sbom-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          repository: telicent-oss/smart-caches-core
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - name: Maven Build to generate SBOMs
+        run: |
+          mvn clean install -q -DskipTests -Dgpg.skip=true
+
+      - name: Detect Maven Version
+        run: |
+          echo "PROJECT_VERSION=$(mvn -q -Dexec.executable=echo -Dexec.args='${project.version}' --non-recursive exec:exec)" >> $GITHUB_ENV
+
+      - name: Grype SBOM Scan
+        id: grype-scan
+        uses: telicent-oss/grype-action@v1
+        with:
+          scan-type: sbom
+          scan-ref: cli/cli-debug/target/cli-debug-${{ env.PROJECT_VERSION }}-bom.json
+          scan-name: telicent-cli-debug
+
+  unsupported-scan-type:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Unsupported Grype Scan type
+        id: grype-scan
+        uses: telicent-oss/grype-action@v1
+        continue-on-error: true
+        with:
+          scan-type: foo
+          scan-ref: .
+          scan-name: unsupported
+
+      - name: Fail if Grype didn't fail
+        if: ${{ failure() && steps.grype-scan.outcome != 'failed' }}
+        run: |
+          exit 1
+
+
