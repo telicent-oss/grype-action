@@ -175,7 +175,7 @@ runs:
     - name: Get Report template
       uses: actions/checkout@v4
       with:
-        repository: rvesse/grype-action
+        repository: telicent-oss/grype-action
         ref: main
         sparse-checkout: |
           report-template.tpl

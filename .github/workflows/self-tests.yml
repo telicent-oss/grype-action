@@ -50,7 +50,7 @@ jobs:
 
       - name: Grype Image Scan that Passes
         id: grype-scan
-        uses: rvesse/grype-action@v1
+        uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
           scan-ref: ${{ matrix.image }}
@@ -78,7 +78,7 @@ jobs:
         
       - name: Grype Image Scan that Passes
         id: grype-scan
-        uses: rvesse/grype-action@v1
+        uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
           scan-ref: telicent/telicent-java21:1.2.12
@@ -104,18 +104,15 @@ jobs:
 
       - name: Grype Image Scan that Passes
         id: grype-scan
-        uses: rvesse/grype-action@v1
+        uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
           scan-ref: telicent/telicent-java21:1.2.12
           scan-name: remote-vex-telicent-java21
           remote-vex: |
-            rvesse/grype-action@deduplicate_vex_entries
-            rvesse/grype-action
+            telicent-oss/grype-action
               telicent-oss/no-such-repo    
             telicent-oss/telicent-base-images
-          gh-user: rvesse
-          gh-token: ${{ secrets.TEST_TOKEN }}
 
   failing-image-scan:
     runs-on: ubuntu-latest
@@ -136,7 +133,7 @@ jobs:
       - name: Grype Image Scan that Fails
         id: grype-scan
         continue-on-error: true
-        uses: rvesse/grype-action@v1
+        uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
           scan-ref: telicent/telicent-access-api:1.4.2
@@ -166,7 +163,7 @@ jobs:
       - name: Grype Image Scan that Fails
         id: grype-scan
         continue-on-error: true
-        uses: rvesse/grype-action@v1
+        uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
           scan-ref: telicent/telicent-access-api:1.4.2
@@ -194,7 +191,7 @@ jobs:
 
       - name: Grype Filesystem Scan
         id: grype-scan
-        uses: rvesse/grype-action@v1
+        uses: telicent-oss/grype-action@v1
         with:
           scan-type: fs
           scan-ref: .
@@ -224,7 +221,7 @@ jobs:
 
       - name: Grype SBOM Scan
         id: grype-scan
-        uses: rvesse/grype-action@v1
+        uses: telicent-oss/grype-action@v1
         with:
           scan-type: sbom
           scan-ref: cli/cli-debug/target/cli-debug-${{ env.PROJECT_VERSION }}-bom.json
@@ -235,7 +232,7 @@ jobs:
     steps:
       - name: Unsupported Grype Scan type
         id: grype-scan
-        uses: rvesse/grype-action@v1
+        uses: telicent-oss/grype-action@v1
         continue-on-error: true
         with:
           scan-type: foo
