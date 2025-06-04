@@ -1,7 +1,7 @@
 {{- if (eq (len .Matches) 0) }}
 <h4>No Vulnerabilities found</h4>
 {{- else }}
-<h4>Vulnerabilities ({{ len .Matches }})</h4>
+<h4>Vulnerabilities</h4>
 <table>
     <tr>
         <th>Package</th>
@@ -11,6 +11,7 @@
         <th>Fixed Version</th>
     </tr>
     {{- range .Matches }}
+    {{- if or (eq .Vulnerability.Severity "Critical") (eq .Vulnerability.Severity "High") }}
     <tr>
         <td><code>{{ .Artifact.Name }}</code></td>
         <td>{{ .Vulnerability.ID }}</td>
@@ -31,6 +32,7 @@
         </td>
     </tr>
     {{- end }}
+    {{- end }}
 </table>
 {{- end }}
 
@@ -47,6 +49,7 @@
         <th>Suppression Status</th>
     </tr>
     {{- range .IgnoredMatches }}
+    {{- if or (eq .Vulnerability.Severity "Critical") (eq .Vulnerability.Severity "High") }}
     <tr>
         <td><code>{{ .Artifact.Name }}</code></td>
         <td>{{ .Vulnerability.ID }}</td>
@@ -60,6 +63,7 @@
           </ul>
         </td>
     </tr>
+    {{- end }}
     {{- end }}
 </table>
 {{- end }}
