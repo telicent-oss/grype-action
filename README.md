@@ -140,7 +140,7 @@ Here we are configuring the action to retrieve remote VEX statements from the `t
 Notice that for this to work you **MAY** need to set the `gh-user` and `gh-token` inputs to custom values, in this
 example these reference some Action secrets that have been created.  The token passed in as the `gh-token` input
 **MUST** have the ability to read the contents of this repository, it **MUST** also have the ability to read packages
-from repositories as the `trivy` and `vexctl` command line tools needed are installed via querying the GitHub Releases
+from repositories as the `grype` and `vexctl` command line tools needed are installed via querying the GitHub Releases
 API, see [Token Permissions](#github-token-permissions) for more information on this.
 
 Note that if any of the specified repositories does not exist, does not have the referenced branch, or no `.vex/`
