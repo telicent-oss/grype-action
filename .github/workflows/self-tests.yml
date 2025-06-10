@@ -55,6 +55,7 @@ jobs:
           scan-type: image
           scan-ref: ${{ matrix.image }}
           scan-name: matrix-${{ matrix.image }}
+          remote-vex: telicent-oss/telicent-base-images
 
   good-image-scan:
     runs-on: ubuntu-latest
@@ -83,6 +84,7 @@ jobs:
           scan-type: image
           scan-ref: telicent/telicent-java21:1.2.12
           scan-name: good-scan
+          remote-vex: telicent-oss/telicent-base-images
 
   remote-vex-scan:
     needs: cache-images

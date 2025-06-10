@@ -9,7 +9,7 @@ inputs:
   scan-ref:
     required: true
     description: |
-      The reference to the filesytem path, SBOM file, or container image to scan
+      The reference to the filesystem path, SBOM file, or container image to scan
   scan-name:
     required: true
     description: |
@@ -22,7 +22,7 @@ inputs:
   scan-type:
     required: true
     description: |
-      Specifies the kind of Trivy scan to perform, one of `image`, `fs` or `sbom`.  Other
+      Specifies the kind of grype scan to perform, one of `image`, `fs` or `sbom`.  Other
       values are not currently supported and will cause the action to fail.
   remote-vex:
     required: false
@@ -35,7 +35,7 @@ inputs:
     required: false
     default: ${{ github.token }}
     description: |
-      A GitHub Token needed to determine the current Trivy database version for caching.
+      A GitHub Token needed to determine the current grype database version for caching.
       Defaults to `github.token` which is the token for this build, can be overridden if this default token doesn't work
       for your build environment.
   gh-user:
