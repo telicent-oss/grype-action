@@ -98,7 +98,17 @@ runs:
       id: sanitised
       shell: bash
       run: |
-        echo "name=$(echo '${{ inputs.scan-name }}' | sed 's/[:/<>|*?\]/-/g' | tr -s '-')" >> $GITHUB_OUTPUT
+        base='${{ inputs.scan-name }}'
+        # Clean characters disallowed by artifact names
+        safe_base="$(printf '%s' "$base" | tr -d '\r\n' | sed -E 's/["<>:|*?\\\/]/-/g' | tr -s '-')"
+        
+        # Make a deterministic unique suffix for this invocation
+        ref_hash="$(printf '%s' '${{ inputs.scan-ref }}' | sha256sum | cut -c1-8)"
+        run_part="${{ runner.name }}-${{ github.run_id }}-${{ github.run_attempt }}"
+        
+        # Keep filenames readable; only the artifact name needs to be unique
+        echo "file_prefix=$safe_base" >> "$GITHUB_OUTPUT"
+        echo "artifact_name=$(printf '%s-%s-%s' "$safe_base" "$run_part" "$ref_hash" | sed -E 's/["<>:|*?\\\/]/-/g' | tr -s '-')" >> "$GITHUB_OUTPUT"
 
     - name: Merge VEX Statements
       id: merge-vex
@@ -133,14 +143,14 @@ runs:
 
     - name: Setup Grype
       id: setup-grype
-      uses: anchore/scan-action/download-grype@v6.2.0
+      uses: anchore/scan-action/download-grype@v7.1.0
       with:
-        grype-version: v0.92.2
+        grype-version: v0.102.0
         cache-db: true
 
     # Perform a full vulnerability to generate a full vulnerability report
     - name: Grype Vulnerability Scan
-      uses: anchore/scan-action@v6.2.0
+      uses: anchore/scan-action@v7.1.0
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
@@ -148,7 +158,7 @@ runs:
         path: ${{ inputs.scan-type == 'fs' && inputs.scan-ref || '' }}
         sbom: ${{ inputs.scan-type == 'sbom' && inputs.scan-ref || '' }}
         # Specify the location for the output
-        output-file: ${{ runner.temp }}/${{ steps.sanitised.outputs.name }}-grype-report.json
+        output-file: ${{ runner.temp }}/${{ steps.sanitised.outputs.file_prefix }}-grype-report.json
         output-format: json
         # Don't want to fail the build yet, just getting the full report for now
         fail-build: false
@@ -158,18 +168,19 @@ runs:
 
     - name: Upload Vulnerability Scan Results
       id: upload-scan-results
-      uses: actions/upload-artifact@v4.4.3
+      uses: actions/upload-artifact@v4.6.2
       with:
-        name: ${{ steps.sanitised.outputs.name }}-grype-report
-        path: ${{ runner.temp }}/${{ steps.sanitised.outputs.name }}-grype-report.json
+        name: ${{ steps.sanitised.outputs.artifact_name }}
+        path: ${{ runner.temp }}/${{ steps.sanitised.outputs.file_prefix }}-grype-report.json
         retention-days: 30
+        overwrite: true
 
     - name: Register Scan Results as Action Output
       shell: sh
       id: generate-outputs
       run: |
-        echo "scan-results=${{ steps.sanitised.outputs.name }}-grype-report" >> $GITHUB_OUTPUT
-        echo "scan-results-file=${{ steps.sanitised.outputs.name }}-grype-report.json" >> $GITHUB_OUTPUT
+        echo "scan-results=${{ steps.sanitised.outputs.artifact_name }}-grype-report" >> $GITHUB_OUTPUT
+        echo "scan-results-file=${{ steps.sanitised.outputs.file_prefix }}-grype-report.json" >> $GITHUB_OUTPUT
         echo "scan-results-url=${{ steps.upload-scan-results.outputs.artifact-url }}" >> $GITHUB_OUTPUT
 
     - name: Get Report template
@@ -184,7 +195,7 @@ runs:
 
     - name: Fail build on High/Criticial Vulnerabilities
       id: gating-scan
-      uses: anchore/scan-action@v6.2.0
+      uses: anchore/scan-action@v7.1.0
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
@@ -192,14 +203,14 @@ runs:
         path: ${{ inputs.scan-type == 'fs' && inputs.scan-ref || '' }}
         sbom: ${{ inputs.scan-type == 'sbom' && inputs.scan-ref || '' }}
         # Specify the location for the output
-        output-file: ${{ runner.temp }}/${{ steps.sanitised.outputs.name }}-grype-gating-report.json
+        output-file: ${{ runner.temp }}/${{ steps.sanitised.outputs.file_prefix }}-grype-gating-report.json
         output-format: json
         # Fail build on HIGH/CRITICAL
         severity-cutoff: high
         fail-build: true
         only-fixed: ${{ inputs.allow-unfixed }}
         # Restore the Cached Grype vulnerability database
-        grype-version: v0.92.2
+        grype-version: v0.102.0
         cache-db: true
 
     - name: Display Gating Vulnerabilities in Job Summary (if any)
