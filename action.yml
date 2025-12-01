@@ -143,14 +143,14 @@ runs:
 
     - name: Setup Grype
       id: setup-grype
-      uses: anchore/scan-action/download-grype@v7.1.0
+      uses: anchore/scan-action/download-grype@v7.2.1
       with:
         grype-version: v0.102.0
         cache-db: true
 
     # Perform a full vulnerability to generate a full vulnerability report
     - name: Grype Vulnerability Scan
-      uses: anchore/scan-action@v7.1.0
+      uses: anchore/scan-action@v7.2.1
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
@@ -195,7 +195,7 @@ runs:
 
     - name: Fail build on High/Criticial Vulnerabilities
       id: gating-scan
-      uses: anchore/scan-action@v7.1.0
+      uses: anchore/scan-action@v7.2.1
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
