@@ -179,7 +179,7 @@ jobs:
           exit 1
 
       - name: Download Scan Artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: ${{ steps.grype-scan.outputs.scan-results }}
 
