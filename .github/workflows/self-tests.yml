@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [ "telicent/telicent-java21:1.2.12", "telicent/telicent-access-api:1.4.2", "alpine:3.21.5" ]
+        image: [ "telicent/telicent-java21:1.2.36", "telicent/telicent-access-api:1.4.2", "alpine:3.21.5" ]
       fail-fast: true
     steps:
       - name: Cache Images
@@ -30,7 +30,7 @@ jobs:
     needs: cache-images
     strategy:
       matrix:
-        image: [ "telicent/telicent-java21:1.2.12", "alpine:3.21.5" ]
+        image: [ "telicent/telicent-java21:1.2.36", "alpine:3.21.5" ]
       fail-fast: false
     steps:
       - name: Checkout
@@ -74,7 +74,7 @@ jobs:
       - name: Restore Cached Image
         uses: telicent-oss/docker-image-cache-action@v1
         with:
-          images: telicent/telicent-java21:1.2.12
+          images: telicent/telicent-java21:1.2.36
           restore-only: true
         
       - name: Grype Image Scan that Passes
@@ -82,7 +82,7 @@ jobs:
         uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
-          scan-ref: telicent/telicent-java21:1.2.12
+          scan-ref: telicent/telicent-java21:1.2.36
           scan-name: good-scan
           remote-vex: telicent-oss/telicent-base-images
 
@@ -101,7 +101,7 @@ jobs:
       - name: Restore Cached Image
         uses: telicent-oss/docker-image-cache-action@v1
         with:
-          images: telicent/telicent-java21:1.2.12
+          images: telicent/telicent-java21:1.2.36
           restore-only: true
 
       - name: Grype Image Scan that Passes
@@ -109,7 +109,7 @@ jobs:
         uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
-          scan-ref: telicent/telicent-java21:1.2.12
+          scan-ref: telicent/telicent-java21:1.2.36
           scan-name: remote-vex-telicent-java21
           remote-vex: |
             telicent-oss/grype-action
