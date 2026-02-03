@@ -30,7 +30,7 @@ jobs:
     needs: cache-images
     strategy:
       matrix:
-        image: [ "telicent/telicent-java21:1.2.40", "alpine:3.21.5" ]
+        image: [ "telicent/telicent-java21:1.2.40", "alpine:3.23.3" ]
       fail-fast: false
     steps:
       - name: Checkout
