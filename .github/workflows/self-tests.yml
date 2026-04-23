@@ -74,7 +74,7 @@ jobs:
       - name: Restore Cached Image
         uses: telicent-oss/docker-image-cache-action@v1
         with:
-          images: telicent/telicent-java21:latest
+          images: telicent/telicent-java21:1.2.45
           restore-only: true
         
       - name: Grype Image Scan that Passes
@@ -82,7 +82,7 @@ jobs:
         uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
-          scan-ref: telicent/telicent-java21:latest
+          scan-ref: telicent/telicent-java21:1.2.45
           scan-name: good-scan
           remote-vex: telicent-oss/telicent-base-images
 
