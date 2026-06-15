@@ -141,12 +141,36 @@ runs:
         fi
         echo ""
 
+    # The GitHub Actions Runner tool cache directory uses lower case arch identifiers BUT runner.arch reports upper case
+    # identifiers so have to lowercase the value so that we can generate the correct installation path that such that
+    # the Grype action finds the pre-installed executable and doesn't need to reinstall it again
+    - name: Lowercase Architecture
+      id: detect-arch
+      shell: bash
+      run: |
+        LOWER_ARCH=$(echo "{{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+        echo "arch=${LOWER_ARCH}" >> $GITHUB_OUTPUT
+
+    - name: Restore Grype executable from Cache
+      id: restore-grype
+      uses: actions/cache/restore@v5
+      with:
+        key: grype-executable-v0.92.2-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
+        path: ${{ runner.tool_cache }}/grype/0.92.2/${{ steps.detect-arch.outputs.arch }}/grype
+
     - name: Setup Grype
       id: setup-grype
       uses: anchore/scan-action/download-grype@v7
       with:
         grype-version: v0.107.0
         cache-db: true
+
+    - name: Save installed Grype executable to Cache
+      if: ${{ steps.restore-grype.outputs.cache-hit != 'true' }}
+      uses: actions/cache/save@v5
+      with:
+        key: grype-executable-v0.92.2-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
+        path: ${{ runner.tool_cache }}/grype/0.92.2/${{ steps.detect-arch.outputs.arch }}/grype
 
     # Perform a full vulnerability to generate a full vulnerability report
     - name: Grype Vulnerability Scan
