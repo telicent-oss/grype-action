@@ -54,6 +54,11 @@ inputs:
       Specifies whether it is permitted for the action to pass if it detects High/Critical 
       vulnerabilities that do not currently have a fix i.e. there is not necessarily anything
       we could do to resolve them at this time.
+  grype-version:
+    required: false
+    default: "0.107.0"
+    description: |
+      Specifies the version of Grype to be installed and used without the leading `v`
 outputs:
   scan-results:
     value: ${{ steps.generate-outputs.outputs.scan-results }}
@@ -155,22 +160,22 @@ runs:
       id: restore-grype
       uses: actions/cache/restore@v5
       with:
-        key: grype-executable-v0.92.2-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
-        path: ${{ runner.tool_cache }}/grype/0.92.2/${{ steps.detect-arch.outputs.arch }}/grype
+        key: grype-executable-v${{ inputs.grype-version }}-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
+        path: ${{ runner.tool_cache }}/grype/${{ inputs.grype-version}}/${{ steps.detect-arch.outputs.arch }}/grype
 
     - name: Setup Grype
       id: setup-grype
       uses: anchore/scan-action/download-grype@v7
       with:
-        grype-version: v0.107.0
+        grype-version: v${{ inputs.grype-version }}
         cache-db: true
 
     - name: Save installed Grype executable to Cache
       if: ${{ steps.restore-grype.outputs.cache-hit != 'true' }}
       uses: actions/cache/save@v5
       with:
-        key: grype-executable-v0.92.2-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
-        path: ${{ runner.tool_cache }}/grype/0.92.2/${{ steps.detect-arch.outputs.arch }}/grype
+        key: grype-executable-v${{ inputs.grype-version }}-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
+        path: ${{ runner.tool_cache }}/grype/${{ inputs.grype-version }}/${{ steps.detect-arch.outputs.arch }}/grype
 
     # Perform a full vulnerability to generate a full vulnerability report
     - name: Grype Vulnerability Scan
@@ -187,7 +192,7 @@ runs:
         # Don't want to fail the build yet, just getting the full report for now
         fail-build: false
         # Restore the Cached Grype vulnerability database
-        grype-version: v0.92.2
+        grype-version: v${{ inputs.grype-version }}
         cache-db: true
 
     - name: Upload Vulnerability Scan Results
@@ -234,7 +239,7 @@ runs:
         fail-build: true
         only-fixed: ${{ inputs.allow-unfixed }}
         # Restore the Cached Grype vulnerability database
-        grype-version: v0.102.0
+        grype-version: v${{ inputs.grype-version }}
         cache-db: true
 
     - name: Display Gating Vulnerabilities in Job Summary (if any)
