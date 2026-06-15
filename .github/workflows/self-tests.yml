@@ -268,7 +268,7 @@ jobs:
         
       - name: Grype Image Scan that Passes
         id: grype-scan
-        uses: telicent-oss/grype-action@cache-executable
+        uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
           scan-ref: telicent/telicent-java21:1.2.50
