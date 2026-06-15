@@ -148,7 +148,7 @@ runs:
       id: detect-arch
       shell: bash
       run: |
-        LOWER_ARCH=$(echo "{{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+        LOWER_ARCH=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
         echo "arch=${LOWER_ARCH}" >> $GITHUB_OUTPUT
 
     - name: Restore Grype executable from Cache
