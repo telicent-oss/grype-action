@@ -11,12 +11,15 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   cache-images:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [ "telicent/telicent-java21:1.2.45", "telicent/telicent-access-api:1.4.2", "alpine:3.23.4" ]
+        image: [ "telicent/telicent-java21:1.2.50", "telicent/telicent-access-api:1.4.2", "alpine:3.24.0" ]
       fail-fast: true
     steps:
       - name: Cache Images
@@ -30,7 +33,7 @@ jobs:
     needs: cache-images
     strategy:
       matrix:
-        image: [ "telicent/telicent-java21:1.2.45", "alpine:3.23.4" ]
+        image: [ "telicent/telicent-java21:1.2.50", "alpine:3.24.0" ]
       fail-fast: false
     steps:
       - name: Checkout
@@ -74,7 +77,7 @@ jobs:
       - name: Restore Cached Image
         uses: telicent-oss/docker-image-cache-action@v1
         with:
-          images: telicent/telicent-java21:1.2.45
+          images: telicent/telicent-java21:1.2.50
           restore-only: true
         
       - name: Grype Image Scan that Passes
@@ -82,7 +85,7 @@ jobs:
         uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
-          scan-ref: telicent/telicent-java21:1.2.45
+          scan-ref: telicent/telicent-java21:1.2.50
           scan-name: good-scan
           remote-vex: telicent-oss/telicent-base-images
 
@@ -101,7 +104,7 @@ jobs:
       - name: Restore Cached Image
         uses: telicent-oss/docker-image-cache-action@v1
         with:
-          images: telicent/telicent-java21:1.2.40
+          images: telicent/telicent-java21:1.2.50
           restore-only: true
 
       - name: Grype Image Scan that Passes
@@ -109,7 +112,7 @@ jobs:
         uses: telicent-oss/grype-action@v1
         with:
           scan-type: image
-          scan-ref: telicent/telicent-java21:1.2.40
+          scan-ref: telicent/telicent-java21:1.2.50
           scan-name: remote-vex-telicent-java21
           remote-vex: |
             telicent-oss/grype-action
@@ -245,5 +248,75 @@ jobs:
         if: ${{ failure() && steps.grype-scan.outcome != 'failed' }}
         run: |
           exit 1
+
+  grype-executable-caching:
+    runs-on: ubuntu-latest
+    needs: cache-images
+    steps:
+      # Need to checkout as we need the VEX statements for the scan to pass!
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3.3.0
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Restore Cached Image
+        uses: telicent-oss/docker-image-cache-action@v1
+        with:
+          images: telicent/telicent-java21:1.2.50
+          restore-only: true
+        
+      - name: Grype Image Scan that Passes
+        id: grype-scan
+        uses: telicent-oss/grype-action@v1
+        with:
+          scan-type: image
+          scan-ref: telicent/telicent-java21:1.2.50
+          scan-name: good-scan
+          remote-vex: telicent-oss/telicent-base-images
+
+      # The GitHub Actions Runner tool cache directory uses lower case arch identifiers BUT runner.arch reports upper case
+      # identifiers so have to lowercase the value so that we can generate the correct installation path that such that
+      # the Grype action finds the pre-installed executable and doesn't need to reinstall it again
+      - name: Lowercase Architecture
+        id: detect-arch
+        shell: bash
+        run: |
+          LOWER_ARCH=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+          echo "arch=${LOWER_ARCH}" >> $GITHUB_OUTPUT
+
+      - name: Verify Grype executable now in the cache
+        uses: actions/cache@v5
+        with:
+          key: grype-executable-v0.107.0-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
+          path: ${{ runner.tool_cache }}/grype/0.107.0/${{ steps.detect-arch.outputs.arch }}/grype
+          lookup-only: true
+          fail-on-cache-miss: true
+
+  grype-executable-reuse:
+    runs-on: ubuntu-latest
+    needs: grype-executable-caching
+    steps:
+      # The GitHub Actions Runner tool cache directory uses lower case arch identifiers BUT runner.arch reports upper case
+      # identifiers so have to lowercase the value so that we can generate the correct installation path that such that
+      # the Grype action finds the pre-installed executable and doesn't need to reinstall it again
+      - name: Lowercase Architecture
+        id: detect-arch
+        shell: bash
+        run: |
+          LOWER_ARCH=$(echo "${{ runner.arch }}" | tr '[:upper:]' '[:lower:]')
+          echo "arch=${LOWER_ARCH}" >> $GITHUB_OUTPUT
+
+      - name: Verify Grype executable available in the cache
+        uses: actions/cache@v5
+        with:
+          key: grype-executable-v0.107.0-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
+          path: ${{ runner.tool_cache }}/grype/0.107.0/${{ steps.detect-arch.outputs.arch }}/grype
+          lookup-only: true
+          fail-on-cache-miss: true
+
 
 
