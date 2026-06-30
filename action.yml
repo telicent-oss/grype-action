@@ -246,7 +246,7 @@ runs:
       if: ${{ always() }}
       shell: bash
       run: |
-        if [ -f "${RUNNER_TEMP}/${{ steps.sanitised.outputs.artifact_name }}-grype-gating-report.json" ]; then
+        if [ -f "${RUNNER_TEMP}/${{ steps.sanitised.outputs.file_prefix }}-grype-gating-report.json" ]; then
           echo "# Grype \`${{ inputs.scan-type }}\` scan on \`${{inputs.scan-ref }}\`" >> "$GITHUB_STEP_SUMMARY"
           SCAN_ARG=""
           case "${{ inputs.scan-type }}" in
