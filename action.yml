@@ -158,7 +158,7 @@ runs:
 
     - name: Restore Grype executable from Cache
       id: restore-grype
-      uses: actions/cache/restore@v5
+      uses: actions/cache/restore@v6
       with:
         key: grype-executable-v${{ inputs.grype-version }}-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
         path: ${{ runner.tool_cache }}/grype/${{ inputs.grype-version}}/${{ steps.detect-arch.outputs.arch }}/grype
@@ -172,7 +172,7 @@ runs:
 
     - name: Save installed Grype executable to Cache
       if: ${{ steps.restore-grype.outputs.cache-hit != 'true' }}
-      uses: actions/cache/save@v5
+      uses: actions/cache/save@v6
       with:
         key: grype-executable-v${{ inputs.grype-version }}-${{ runner.os }}-${{ steps.detect-arch.outputs.arch }}
         path: ${{ runner.tool_cache }}/grype/${{ inputs.grype-version }}/${{ steps.detect-arch.outputs.arch }}/grype
