@@ -246,7 +246,7 @@ runs:
       if: ${{ always() }}
       shell: bash
       run: |
-        if [ -f "${RUNNER_TEMP}/${{ steps.sanitised.outputs.name }}-grype-gating-report.json" ]; then
+        if [ -f "${RUNNER_TEMP}/${{ steps.sanitised.outputs.artifact_name }}-grype-gating-report.json" ]; then
           echo "# Grype \`${{ inputs.scan-type }}\` scan on \`${{inputs.scan-ref }}\`" >> "$GITHUB_STEP_SUMMARY"
           SCAN_ARG=""
           case "${{ inputs.scan-type }}" in
@@ -277,7 +277,7 @@ runs:
       if: ${{ failure() && steps.gating-scan.outcome == 'failure' }}
       shell: sh
       run: |
-        echo "::error title=${{ github.job }} - High/Critical Vulnerabilities Found::Grype detected HIGH/CRITICAL vulnerabilities scanning ${{ inputs.scan-ref }}, please review the report and apply relevant fixes.  Report is attached as build artifact ${{ steps.sanitised.outputs.name }}-grype-report and rendered as a human readable job summary."
+        echo "::error title=${{ github.job }} - High/Critical Vulnerabilities Found::Grype detected HIGH/CRITICAL vulnerabilities scanning ${{ inputs.scan-ref }}, please review the report and apply relevant fixes.  Report is attached as build artifact ${{ steps.sanitised.outputs.artifact_name }}-grype-report and rendered as a human readable job summary."
 
     - name: Cleanup .grype-templates/
       if: ${{ always() }}
