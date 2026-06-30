@@ -213,7 +213,7 @@ runs:
         echo "scan-results-url=${{ steps.upload-scan-results.outputs.artifact-url }}" >> $GITHUB_OUTPUT
 
     - name: Get Report template
-      uses: actions/checkout@v6
+      uses: actions/checkout@v7
       with:
         repository: telicent-oss/grype-action
         ref: main
