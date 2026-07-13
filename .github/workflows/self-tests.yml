@@ -145,7 +145,7 @@ jobs:
           scan-name: failing-scan
 
       - name: Fail if Grype didn't fail
-        if: ${{ failure() && steps.grype-scan.outcome != 'failed' }}
+        if: ${{ steps.grype-scan.outcome != 'failure' }}
         run: |
           exit 1
 
@@ -177,7 +177,7 @@ jobs:
           remote-vex: |
                
       - name: Fail if Grype didn't fail
-        if: ${{ failure() && steps.grype-scan.outcome != 'failed' }}
+        if: ${{ steps.grype-scan.outcome != 'failure' }}
         run: |
           exit 1
 
@@ -245,7 +245,7 @@ jobs:
           scan-name: unsupported
 
       - name: Fail if Grype didn't fail
-        if: ${{ failure() && steps.grype-scan.outcome != 'failed' }}
+        if: ${{ steps.grype-scan.outcome != 'failure' }}
         run: |
           exit 1
 
