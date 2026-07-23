@@ -187,7 +187,9 @@ runs:
         # patched-version CPE false positive) would otherwise be dropped.
         # Guard: grype ERRORS if this points at a non-existent file, so pass ''
         # (harmless — no VEX applied) whenever merge-vex produced no document.
-        GRYPE_VEX_DOCUMENTS: ${{ steps.merge-vex.outputs.prepared == 'true' && steps.merge-vex.outputs.vex-file || '' }}
+        # SBOM scans must continue to rely on the generated `.grype.yaml`
+        # because Grype 0.107.0 does not support native VEX with SBOM sources.
+        GRYPE_VEX_DOCUMENTS: ${{ steps.merge-vex.outputs.prepared == 'true' && inputs.scan-type != 'sbom' && steps.merge-vex.outputs.vex-file || '' }}
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
@@ -239,8 +241,9 @@ runs:
       env:
         # Same native-VEX handoff as the full report scan above so the GATE
         # honours `fixed`/`not_affected` statements, not just the `not_affected`
-        # subset translated into `.grype.yaml`. Guarded against a missing file.
-        GRYPE_VEX_DOCUMENTS: ${{ steps.merge-vex.outputs.prepared == 'true' && steps.merge-vex.outputs.vex-file || '' }}
+        # subset translated into `.grype.yaml`. SBOM scans stay on the
+        # generated ignore file path until Grype supports native VEX there.
+        GRYPE_VEX_DOCUMENTS: ${{ steps.merge-vex.outputs.prepared == 'true' && inputs.scan-type != 'sbom' && steps.merge-vex.outputs.vex-file || '' }}
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
