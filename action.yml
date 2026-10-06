@@ -200,7 +200,7 @@ runs:
       if: ${{ always() }}
       uses: actions/upload-artifact@v7.0.1
       with:
-        name: ${{ steps.sanitised.outputs.artifact_name }}
+        name: ${{ steps.sanitised.outputs.artifact_name }}-grype-report
         path: ${{ runner.temp }}/${{ steps.sanitised.outputs.file_prefix }}-grype-report.json
         retention-days: 30
         overwrite: true
