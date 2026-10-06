@@ -197,12 +197,16 @@ runs:
 
     - name: Upload Vulnerability Scan Results
       id: upload-scan-results
+      if: ${{ always() }}
       uses: actions/upload-artifact@v7.0.1
       with:
         name: ${{ steps.sanitised.outputs.artifact_name }}
         path: ${{ runner.temp }}/${{ steps.sanitised.outputs.file_prefix }}-grype-report.json
         retention-days: 30
         overwrite: true
+        # A failure prior to the grype scan will mean there's no scan results to upload and don't want to treat that
+        # an a warning/error
+        if-no-files-found: ignore
 
     - name: Register Scan Results as Action Output
       shell: sh
