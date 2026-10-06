@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        image: [ "telicent/telicent-java21:1.2.50", "telicent/telicent-access-api:1.4.2", "alpine:3.24.0" ]
+        image: [ "telicent/telicent-java21:1.2.71", "telicent/telicent-access-api:1.4.2" ]
       fail-fast: true
     steps:
       - name: Cache Images
@@ -33,7 +33,7 @@ jobs:
     needs: cache-images
     strategy:
       matrix:
-        image: [ "telicent/telicent-java21:1.2.50", "alpine:3.24.0" ]
+        image: [ "telicent/telicent-java21:1.2.71" ]
       fail-fast: false
     steps:
       - name: Checkout
@@ -53,7 +53,7 @@ jobs:
 
       - name: Grype Image Scan that Passes
         id: grype-scan
-        uses: telicent-oss/grype-action@v1
+        uses: telicent-oss/grype-action@cache-fix
         with:
           scan-type: image
           scan-ref: ${{ matrix.image }}
@@ -77,15 +77,15 @@ jobs:
       - name: Restore Cached Image
         uses: telicent-oss/docker-image-cache-action@v1
         with:
-          images: telicent/telicent-java21:1.2.50
+          images: telicent/telicent-java21:1.2.71
           restore-only: true
         
       - name: Grype Image Scan that Passes
         id: grype-scan
-        uses: telicent-oss/grype-action@v1
+        uses: telicent-oss/grype-action@cache-fix
         with:
           scan-type: image
-          scan-ref: telicent/telicent-java21:1.2.50
+          scan-ref: telicent/telicent-java21:1.2.71
           scan-name: good-scan
           remote-vex: telicent-oss/telicent-base-images
 
@@ -104,15 +104,15 @@ jobs:
       - name: Restore Cached Image
         uses: telicent-oss/docker-image-cache-action@v1
         with:
-          images: telicent/telicent-java21:1.2.50
+          images: telicent/telicent-java21:1.2.71
           restore-only: true
 
       - name: Grype Image Scan that Passes
         id: grype-scan
-        uses: telicent-oss/grype-action@v1
+        uses: telicent-oss/grype-action@cache-fix
         with:
           scan-type: image
-          scan-ref: telicent/telicent-java21:1.2.50
+          scan-ref: telicent/telicent-java21:1.2.71
           scan-name: remote-vex-telicent-java21
           remote-vex: |
             telicent-oss/grype-action
@@ -138,7 +138,7 @@ jobs:
       - name: Grype Image Scan that Fails
         id: grype-scan
         continue-on-error: true
-        uses: telicent-oss/grype-action@v1
+        uses: telicent-oss/grype-action@cache-fix
         with:
           scan-type: image
           scan-ref: telicent/telicent-access-api:1.4.2
@@ -168,7 +168,7 @@ jobs:
       - name: Grype Image Scan that Fails
         id: grype-scan
         continue-on-error: true
-        uses: telicent-oss/grype-action@v1
+        uses: telicent-oss/grype-action@cache-fix
         with:
           scan-type: image
           scan-ref: telicent/telicent-access-api:1.4.2
@@ -196,7 +196,7 @@ jobs:
 
       - name: Grype Filesystem Scan
         id: grype-scan
-        uses: telicent-oss/grype-action@v1
+        uses: telicent-oss/grype-action@cache-fix
         with:
           scan-type: fs
           scan-ref: .
@@ -226,7 +226,7 @@ jobs:
 
       - name: Grype SBOM Scan
         id: grype-scan
-        uses: telicent-oss/grype-action@v1
+        uses: telicent-oss/grype-action@cache-fix
         with:
           scan-type: sbom
           scan-ref: cli/cli-debug/target/cli-debug-${{ env.PROJECT_VERSION }}-bom.json
@@ -237,7 +237,7 @@ jobs:
     steps:
       - name: Unsupported Grype Scan type
         id: grype-scan
-        uses: telicent-oss/grype-action@v1
+        uses: telicent-oss/grype-action@cache-fix
         continue-on-error: true
         with:
           scan-type: foo
@@ -266,15 +266,15 @@ jobs:
       - name: Restore Cached Image
         uses: telicent-oss/docker-image-cache-action@v1
         with:
-          images: telicent/telicent-java21:1.2.50
+          images: telicent/telicent-java21:1.2.71
           restore-only: true
         
       - name: Grype Image Scan that Passes
         id: grype-scan
-        uses: telicent-oss/grype-action@v1
+        uses: telicent-oss/grype-action@cache-fix
         with:
           scan-type: image
-          scan-ref: telicent/telicent-java21:1.2.50
+          scan-ref: telicent/telicent-java21:1.2.71
           scan-name: good-scan
           remote-vex: telicent-oss/telicent-base-images
 
