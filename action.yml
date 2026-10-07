@@ -56,7 +56,7 @@ inputs:
       we could do to resolve them at this time.
   grype-version:
     required: false
-    default: "0.107.0"
+    default: "0.120.1"
     description: |
       Specifies the version of Grype to be installed and used without the leading `v`
 outputs:
@@ -130,17 +130,18 @@ runs:
         cat ${{ steps.merge-vex.outputs.vex-file }} | yq '.statements[] | select(.status == "not_affected") | { "ignore": [ { "vulnerability": .vulnerability.name, "reason": "${{ steps.merge-vex.outputs.vex-file-name }}: \(.justification)" } ] } | . as $item ireduce({}; . *+ $item)' > .grype.yaml.generated
 
         echo ""
-        echo "Generated Grype Configuration is as follows:"
+        echo "::group::Generated Grype Configuration is as follows:"
         cat .grype.yaml.generated
-        echo ""
+        echo "::endgroup::"
 
         if [ -f ".grype.yaml" ]; then
-          echo "Merging Grype Configuration files..."
+          echo "::group::Merging Grype Configuration files..."
           cp -v .grype.yaml .grype.yaml.original
           yq eval-all '. as $item ireduce ({}; . *+ $item )' .grype.yaml.original .grype.yaml.generated > .grype.yaml.merged
           cp -fv .grype.yaml.merged .grype.yaml
           echo "Merged Grype configuration file is as follows:"
           cat .grype.yaml
+          echo "::endgroup::"
         else
           cp -v .grype.yaml.generated .grype.yaml
         fi
@@ -165,9 +166,10 @@ runs:
 
     - name: Setup Grype
       id: setup-grype
-      uses: anchore/scan-action/download-grype@v7
+      uses: rvesse/scan-action/download-grype@v7.4.2-cache-fix
       with:
         grype-version: v${{ inputs.grype-version }}
+        # Ensure that the action restores, updates and caches the Grype DB
         cache-db: true
 
     - name: Save installed Grype executable to Cache
@@ -179,7 +181,7 @@ runs:
 
     # Perform a full vulnerability to generate a full vulnerability report
     - name: Grype Vulnerability Scan
-      uses: anchore/scan-action@v7
+      uses: rvesse/scan-action@v7.4.2-cache-fix
       env:
         # Hand the merged VEX document to grype natively so it honours ALL openVEX
         # statuses (fixed, not_affected). The `.grype.yaml` generated above only
@@ -188,6 +190,9 @@ runs:
         # Guard: grype ERRORS if this points at a non-existent file, so pass ''
         # (harmless — no VEX applied) whenever merge-vex produced no document.
         GRYPE_VEX_DOCUMENTS: ${{ steps.merge-vex.outputs.prepared == 'true' && steps.merge-vex.outputs.vex-file || '' }}
+        # This prevents the actual grype run from updating the database again since we known download-grype has ensured
+        # an up to date database
+        GRYPE_DB_AUTO_UPDATE: false
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
@@ -199,12 +204,13 @@ runs:
         output-format: json
         # Don't want to fail the build yet, just getting the full report for now
         fail-build: false
-        # Restore the Cached Grype vulnerability database
         grype-version: v${{ inputs.grype-version }}
-        cache-db: true
+        # download-grype will already have restored, updated and cached the Grype DB as needed
+        cache-db: false
 
     - name: Upload Vulnerability Scan Results
       id: upload-scan-results
+      if: ${{ always() }}
       uses: actions/upload-artifact@v7.0.1
       with:
         # Must match the `scan-results` output (below) and the error message so
@@ -214,6 +220,9 @@ runs:
         path: ${{ runner.temp }}/${{ steps.sanitised.outputs.file_prefix }}-grype-report.json
         retention-days: 30
         overwrite: true
+        # A failure prior to the grype scan will mean there's no scan results to upload and don't want to treat that
+        # an a warning/error
+        if-no-files-found: ignore
 
     - name: Register Scan Results as Action Output
       shell: sh
@@ -235,12 +244,15 @@ runs:
 
     - name: Fail build on High/Criticial Vulnerabilities
       id: gating-scan
-      uses: anchore/scan-action@v7
+      uses: rvesse/scan-action@v7.4.2-cache-fix
       env:
         # Same native-VEX handoff as the full report scan above so the GATE
         # honours `fixed`/`not_affected` statements, not just the `not_affected`
         # subset translated into `.grype.yaml`. Guarded against a missing file.
         GRYPE_VEX_DOCUMENTS: ${{ steps.merge-vex.outputs.prepared == 'true' && steps.merge-vex.outputs.vex-file || '' }}
+        # This prevents the actual grype run from updating the database again since we known download-grype has ensured
+        # an up to date database
+        GRYPE_DB_AUTO_UPDATE: false
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
@@ -254,13 +266,17 @@ runs:
         severity-cutoff: high
         fail-build: true
         only-fixed: ${{ inputs.allow-unfixed }}
-        # Restore the Cached Grype vulnerability database
         grype-version: v${{ inputs.grype-version }}
-        cache-db: true
+        # NB - download-grype will already have restored, updated and cached the Grype DB as needed
+        cache-db: false
 
     - name: Display Gating Vulnerabilities in Job Summary (if any)
       if: ${{ always() }}
       shell: bash
+      env:
+        # This prevents the actual grype run from updating the database again since we known download-grype has ensured
+        # an up to date database
+        GRYPE_DB_AUTO_UPDATE: false
       run: |
         if [ -f "${RUNNER_TEMP}/${{ steps.sanitised.outputs.file_prefix }}-grype-gating-report.json" ]; then
           echo "# Grype \`${{ inputs.scan-type }}\` scan on \`${{inputs.scan-ref }}\`" >> "$GITHUB_STEP_SUMMARY"
