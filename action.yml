@@ -56,7 +56,7 @@ inputs:
       we could do to resolve them at this time.
   grype-version:
     required: false
-    default: "0.107.0"
+    default: "0.120.1"
     description: |
       Specifies the version of Grype to be installed and used without the leading `v`
 outputs:
