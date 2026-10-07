@@ -130,17 +130,18 @@ runs:
         cat ${{ steps.merge-vex.outputs.vex-file }} | yq '.statements[] | select(.status == "not_affected") | { "ignore": [ { "vulnerability": .vulnerability.name, "reason": "${{ steps.merge-vex.outputs.vex-file-name }}: \(.justification)" } ] } | . as $item ireduce({}; . *+ $item)' > .grype.yaml.generated
 
         echo ""
-        echo "Generated Grype Configuration is as follows:"
+        echo "::group::Generated Grype Configuration is as follows:"
         cat .grype.yaml.generated
-        echo ""
+        echo "::endgroup::"
 
         if [ -f ".grype.yaml" ]; then
-          echo "Merging Grype Configuration files..."
+          echo "::group::Merging Grype Configuration files..."
           cp -v .grype.yaml .grype.yaml.original
           yq eval-all '. as $item ireduce ({}; . *+ $item )' .grype.yaml.original .grype.yaml.generated > .grype.yaml.merged
           cp -fv .grype.yaml.merged .grype.yaml
           echo "Merged Grype configuration file is as follows:"
           cat .grype.yaml
+          echo "::endgroup::"
         else
           cp -v .grype.yaml.generated .grype.yaml
         fi
