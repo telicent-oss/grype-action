@@ -168,6 +168,7 @@ runs:
       uses: rvesse/scan-action/download-grype@v7.4.2-cache-fix
       with:
         grype-version: v${{ inputs.grype-version }}
+        # Ensure that the action restores, updates and caches the Grype DB
         cache-db: true
 
     - name: Save installed Grype executable to Cache
@@ -191,9 +192,13 @@ runs:
         output-format: json
         # Don't want to fail the build yet, just getting the full report for now
         fail-build: false
-        # Restore the Cached Grype vulnerability database
         grype-version: v${{ inputs.grype-version }}
-        cache-db: true
+        # download-grype will already have restored, updated and cached the Grype DB as needed
+        cache-db: false
+      env:
+        # This prevents the actual grype run from updating the database again since we known download-grype has ensured
+        # an up to date database
+        GRYPE_DB_AUTO_UPDATE: false
 
     - name: Upload Vulnerability Scan Results
       id: upload-scan-results
@@ -242,13 +247,21 @@ runs:
         severity-cutoff: high
         fail-build: true
         only-fixed: ${{ inputs.allow-unfixed }}
-        # Restore the Cached Grype vulnerability database
         grype-version: v${{ inputs.grype-version }}
-        cache-db: true
+        # NB - download-grype will already have restored, updated and cached the Grype DB as needed
+        cache-db: false
+      env:
+        # This prevents the actual grype run from updating the database again since we known download-grype has ensured
+        # an up to date database
+        GRYPE_DB_AUTO_UPDATE: false
 
     - name: Display Gating Vulnerabilities in Job Summary (if any)
       if: ${{ always() }}
       shell: bash
+      env:
+        # This prevents the actual grype run from updating the database again since we known download-grype has ensured
+        # an up to date database
+        GRYPE_DB_AUTO_UPDATE: false
       run: |
         if [ -f "${RUNNER_TEMP}/${{ steps.sanitised.outputs.file_prefix }}-grype-gating-report.json" ]; then
           echo "# Grype \`${{ inputs.scan-type }}\` scan on \`${{inputs.scan-ref }}\`" >> "$GITHUB_STEP_SUMMARY"
