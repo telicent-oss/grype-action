@@ -205,7 +205,7 @@ runs:
 
     - name: Upload Vulnerability Scan Results
       id: upload-scan-results
-      uses: actions/upload-artifact@v7.0.1
+      uses: actions/upload-artifact@v7.0.2
       with:
         # Must match the `scan-results` output (below) and the error message so
         # consumers can download the report via that output. The output appends
