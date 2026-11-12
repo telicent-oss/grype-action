@@ -127,7 +127,10 @@ runs:
       if: ${{ steps.merge-vex.outputs.prepared == 'true' }}
       shell: bash
       run: |
-        cat ${{ steps.merge-vex.outputs.vex-file }} | yq '.statements[] | select(.status == "not_affected") | { "ignore": [ { "vulnerability": .vulnerability.name, "reason": "${{ steps.merge-vex.outputs.vex-file-name }}: \(.justification)" } ] } | . as $item ireduce({}; . *+ $item)' > .grype.yaml.generated
+        # Collect the statements into a list *before* building the ignore entries. Mapping over the stream
+        # instead emits a separate "ignore:" key per statement, which is a duplicate mapping key: Grype >= 0.120
+        # refuses to load such a config, and yq quietly keeps only the last one when merging.
+        cat ${{ steps.merge-vex.outputs.vex-file }} | yq '{ "ignore": [.statements[] | select(.status == "not_affected")] | map({ "vulnerability": .vulnerability.name, "reason": "${{ steps.merge-vex.outputs.vex-file-name }}: \(.justification)" }) }' > .grype.yaml.generated
 
         echo ""
         echo "::group::Generated Grype Configuration is as follows:"
