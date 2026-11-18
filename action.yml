@@ -172,8 +172,49 @@ runs:
       uses: rvesse/scan-action/download-grype@v7.4.2-cache-fix
       with:
         grype-version: v${{ inputs.grype-version }}
-        # Ensure that the action restores, updates and caches the Grype DB
-        cache-db: true
+        # The DB is cached by the steps below instead, so a stale DB can be deleted before a fresh one is downloaded
+        cache-db: false
+
+    # The key never matches exactly, so restore-keys picks the most recently saved DB for this Grype version
+    - name: Restore Grype DB from Cache
+      uses: actions/cache/restore@v6
+      with:
+        path: ~/.cache/grype/db
+        key: grype-db-v${{ inputs.grype-version }}-${{ github.run_id }}
+        restore-keys: grype-db-v${{ inputs.grype-version }}-
+
+
+    - name: Update Grype DB
+      id: update-db
+      shell: bash
+      env:
+        GRYPE: ${{ steps.setup-grype.outputs.cmd }}
+      run: |
+        if "$GRYPE" db status > /dev/null 2>&1; then
+          if "$GRYPE" db check; then
+            echo "Grype DB is up to date."
+          else
+            CHECK_EXIT=$?
+
+            if [ "$CHECK_EXIT" -eq 1 ]; then
+              echo "Grype DB is stale. Deleting before update."
+              "$GRYPE" db delete
+            else
+              echo "::error::Unable to check Grype DB for updates."
+              exit "$CHECK_EXIT"
+            fi
+          fi
+        fi
+
+        "$GRYPE" db update
+        echo "built=$("$GRYPE" db status -o json | jq -er .built)" >> "$GITHUB_OUTPUT"
+
+    - name: Save Grype DB to Cache
+      continue-on-error: true
+      uses: actions/cache/save@v6
+      with:
+        path: ~/.cache/grype/db
+        key: grype-db-v${{ inputs.grype-version }}-${{ steps.update-db.outputs.built }}
 
     - name: Save installed Grype executable to Cache
       if: ${{ steps.restore-grype.outputs.cache-hit != 'true' }}
