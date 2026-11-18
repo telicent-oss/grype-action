@@ -168,7 +168,17 @@ runs:
       uses: anchore/scan-action/download-grype@v7
       with:
         grype-version: v${{ inputs.grype-version }}
-        cache-db: true
+
+    # Fetch the vulnerability DB exactly once for this action run. Every Grype invocation below sets
+    # GRYPE_DB_AUTO_UPDATE=false so it reuses this copy rather than checking/downloading again.
+    - name: Update Grype vulnerability DB
+      shell: bash
+      env:
+        GRYPE: ${{ steps.setup-grype.outputs.cmd }}
+      run: |
+        set -euo pipefail
+        "$GRYPE" db update
+        "$GRYPE" db status
 
     - name: Save installed Grype executable to Cache
       if: ${{ steps.restore-grype.outputs.cache-hit != 'true' }}
@@ -188,6 +198,8 @@ runs:
         # Guard: grype ERRORS if this points at a non-existent file, so pass ''
         # (harmless — no VEX applied) whenever merge-vex produced no document.
         GRYPE_VEX_DOCUMENTS: ${{ steps.merge-vex.outputs.prepared == 'true' && steps.merge-vex.outputs.vex-file || '' }}
+        # Reuse the DB fetched in 'Update Grype vulnerability DB'
+        GRYPE_DB_AUTO_UPDATE: "false"
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
@@ -199,9 +211,7 @@ runs:
         output-format: json
         # Don't want to fail the build yet, just getting the full report for now
         fail-build: false
-        # Restore the Cached Grype vulnerability database
         grype-version: v${{ inputs.grype-version }}
-        cache-db: true
 
     - name: Upload Vulnerability Scan Results
       id: upload-scan-results
@@ -241,6 +251,8 @@ runs:
         # honours `fixed`/`not_affected` statements, not just the `not_affected`
         # subset translated into `.grype.yaml`. Guarded against a missing file.
         GRYPE_VEX_DOCUMENTS: ${{ steps.merge-vex.outputs.prepared == 'true' && steps.merge-vex.outputs.vex-file || '' }}
+        # Reuse the DB fetched in 'Update Grype vulnerability DB'
+        GRYPE_DB_AUTO_UPDATE: "false"
       with:
         # Annoyingly Grype's action has separate input for each supported scan type, so use some GitHub Actions
         # expressions to either populate/blank each possible input as appropriate
@@ -254,13 +266,17 @@ runs:
         severity-cutoff: high
         fail-build: true
         only-fixed: ${{ inputs.allow-unfixed }}
-        # Restore the Cached Grype vulnerability database
         grype-version: v${{ inputs.grype-version }}
-        cache-db: true
 
     - name: Display Gating Vulnerabilities in Job Summary (if any)
       if: ${{ always() }}
       shell: bash
+      env:
+        # Reuse the DB fetched in 'Update Grype vulnerability DB'
+        GRYPE_DB_AUTO_UPDATE: "false"
+        GRYPE_CHECK_FOR_APP_UPDATE: "false"
+        # Apply the same VEX statements as the gating scan so the summary matches the pass/fail result
+        GRYPE_VEX_DOCUMENTS: ${{ steps.merge-vex.outputs.prepared == 'true' && steps.merge-vex.outputs.vex-file || '' }}
       run: |
         if [ -f "${RUNNER_TEMP}/${{ steps.sanitised.outputs.file_prefix }}-grype-gating-report.json" ]; then
           echo "# Grype \`${{ inputs.scan-type }}\` scan on \`${{inputs.scan-ref }}\`" >> "$GITHUB_STEP_SUMMARY"
