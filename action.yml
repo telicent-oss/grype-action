@@ -190,25 +190,39 @@ runs:
       env:
         GRYPE: ${{ steps.setup-grype.outputs.cmd }}
       run: |
-        if "$GRYPE" db status > /dev/null 2>&1; then
-          if "$GRYPE" db check; then
-            echo "Grype DB is up to date."
-          else
-            CHECK_EXIT=$?
+        # Check for updates; capture exit code without tripping `set -e`
+        CHECK_EXIT=0
+        "$GRYPE" db check || CHECK_EXIT=$?
 
-            if [ "$CHECK_EXIT" -eq 1 ]; then
-              echo "Grype DB is stale. Deleting before update."
-              "$GRYPE" db delete
-            else
-              echo "::error::Unable to check Grype DB for updates."
+        case "$CHECK_EXIT" in
+          0)
+            # Cached DB is current; nothing to do
+            echo "Grype DB is up to date."
+            ;;
+          100)
+            # Update available; delete first so old and new DBs aren't on disk together
+            echo "Grype DB update available. Deleting old DB before update to save space."
+            "$GRYPE" db delete
+            ;;
+          *)
+            # Check failed; use status to tell a bad DB from a failed check
+            if "$GRYPE" db status > /dev/null 2>&1; then
+              # Local DB is valid, so the check itself failed (e.g. network); keep the cache
+              echo "::error::Unable to check Grype DB for updates (exit $CHECK_EXIT)."
               exit "$CHECK_EXIT"
             fi
-          fi
-        fi
+            # DB is missing, too old or corrupt; clear it for a fresh download
+            echo "Grype DB is missing or invalid. Deleting before update."
+            "$GRYPE" db delete || true
+            ;;
+        esac
 
+        # Downloads only if needed; no-op when already current
         "$GRYPE" db update
-        echo "built=$("$GRYPE" db status -o json | jq -er .built)" >> "$GITHUB_OUTPUT"
 
+        # Expose the DB build timestamp to later steps
+        echo "built=$("$GRYPE" db status -o json | jq -er .built)" >> "$GITHUB_OUTPUT"
+        
     - name: Save Grype DB to Cache
       continue-on-error: true
       uses: actions/cache/save@v6
