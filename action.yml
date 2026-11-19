@@ -177,19 +177,26 @@ runs:
 
     # The key never matches exactly, so restore-keys picks the most recently saved DB for this Grype version
     - name: Restore Grype DB from Cache
+      id: restore-db
       uses: actions/cache/restore@v6
       with:
         path: ~/.cache/grype/db
         key: grype-db-v${{ inputs.grype-version }}-${{ github.run_id }}
         restore-keys: grype-db-v${{ inputs.grype-version }}-
 
-
     - name: Update Grype DB
-      id: update-db
-      shell: bash
-      env:
-        GRYPE: ${{ steps.setup-grype.outputs.cmd }}
-      run: |
+    id: update-db
+    shell: bash
+    env:
+      GRYPE: ${{ steps.setup-grype.outputs.cmd }}
+      CACHED_KEY: ${{ steps.restore-db.outputs.cache-matched-key }}
+    run: |
+      if [ -z "$CACHED_KEY" ]; then
+        # Nothing restored from cache; just download
+        echo "No cached Grype DB found. Downloading fresh DB."
+      else
+        echo "Restored cached Grype DB ($CACHED_KEY). Checking for updates."
+
         # Check for updates; capture exit code without tripping `set -e`
         CHECK_EXIT=0
         "$GRYPE" db check || CHECK_EXIT=$?
@@ -211,18 +218,19 @@ runs:
               echo "::error::Unable to check Grype DB for updates (exit $CHECK_EXIT)."
               exit "$CHECK_EXIT"
             fi
-            # DB is missing, too old or corrupt; clear it for a fresh download
-            echo "Grype DB is missing or invalid. Deleting before update."
+            # Cached DB is too old or corrupt; clear it for a fresh download
+            echo "Cached Grype DB is invalid. Deleting before update."
             "$GRYPE" db delete || true
             ;;
         esac
+      fi
 
-        # Downloads only if needed; no-op when already current
-        "$GRYPE" db update
+      # Downloads only if needed; no-op when already current
+      "$GRYPE" db update
 
-        # Expose the DB build timestamp to later steps
-        echo "built=$("$GRYPE" db status -o json | jq -er .built)" >> "$GITHUB_OUTPUT"
-        
+      # Expose the DB build timestamp to later steps
+      echo "built=$("$GRYPE" db status -o json | jq -er .built)" >> "$GITHUB_OUTPUT"      
+      
     - name: Save Grype DB to Cache
       continue-on-error: true
       uses: actions/cache/save@v6
